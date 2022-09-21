@@ -17,7 +17,7 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 500; i++ {
 		wg.Add(1)
 		go func(id int, wg *sync.WaitGroup) {
 			defer fmt.Printf("consumer[%d] no more message - bye!\n", id)
@@ -39,12 +39,13 @@ func main() {
 	}
 
 	go func() {
-		for i := 0; i < 5; i++ {
+		for i := 0; i < 10000; i++ {
 			if err := broker.Publish("topic-1", whisper.Message{
 				Data:      fmt.Sprintf("Data %d", i),
 				Timestamp: time.Now().Unix(),
 			}); err != nil {
-				panic(err)
+				fmt.Println(err)
+				return
 			}
 		}
 	}()
