@@ -1,4 +1,4 @@
-# Ares: an in-memory message broker
+# whisper: an in-memory message broker
 
 
 ## How it works

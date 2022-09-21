@@ -5,45 +5,52 @@ import (
 	"sync"
 	"time"
 
-	"github.com/KonstantinGasser/ares/ares"
+	"github.com/KonstantinGasser/whisper"
 )
 
 func main() {
 
-	broker := ares.NewBroker()
+	broker := whisper.NewBroker()
 
-	broker.NewTopic("setup.meta-data.created", ares.WithTimeout(time.Millisecond*50, nil))
+	broker.NewTopic("topic-1")
+	broker.NewTopic("topic-2")
 
 	var wg sync.WaitGroup
 
 	for i := 0; i < 5; i++ {
 		wg.Add(1)
 		go func(id int, wg *sync.WaitGroup) {
-			defer fmt.Printf("consumer[%d] no more message - bye!", id)
+			defer fmt.Printf("consumer[%d] no more message - bye!\n", id)
 			defer wg.Done()
 
-			consumer, err := broker.Subscribe("setup.meta-data.created")
+			consumer, err := broker.Subscribe("topic-1")
 			if err != nil {
 				panic(err)
 			}
 
 			for {
-				data, ok := consumer.Consume()
+				msg, ok := consumer.Consume()
 				if !ok {
 					break
 				}
-
-				fmt.Printf("Consumer[%d]: %v\n", id, data)
+				fmt.Printf("Consumer[topic-1]: %v\n", msg.Data)
 			}
 		}(i, &wg)
 	}
 
-	for i := 0; i < 1; i++ {
-		if err := broker.Publish("setup.meta-data.created", fmt.Sprintf("Event: %d", i)); err != nil {
-			panic(err)
+	go func() {
+		for i := 0; i < 5; i++ {
+			if err := broker.Publish("topic-1", whisper.Message{
+				Data:      fmt.Sprintf("Data %d", i),
+				Timestamp: time.Now().Unix(),
+			}); err != nil {
+				panic(err)
+			}
 		}
-	}
+	}()
 
-	wg.Wait()
-
+	time.Sleep(time.Second * 5)
+	fmt.Println("Stopping broker")
+	broker.Stop()
+	fmt.Println("Closed")
 }

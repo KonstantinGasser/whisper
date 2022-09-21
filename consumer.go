@@ -1,14 +1,14 @@
-package ares
+package whisper
 
 type Consumer interface {
-	Consume() (interface{}, bool)
+	Consume() (Message, bool)
 }
 
 type consumer struct {
-	stream <-chan interface{}
+	poll <-chan Message
 }
 
-func (c consumer) Consume() (interface{}, bool) {
-	data, ok := <-c.stream
-	return data, ok
+func (c consumer) Consume() (Message, bool) {
+	msg, ok := <-c.poll
+	return msg, ok
 }
