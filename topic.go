@@ -5,10 +5,12 @@ import (
 )
 
 type Message struct {
-	Topic     string
+	topic     string
 	Timestamp int64
 	Data      interface{}
 }
+
+func (msg Message) Topic() string { return msg.topic }
 
 // Topic allows to direct messages to specific consumer groups
 // which can subscribe to the topic
@@ -29,7 +31,7 @@ func newTopic(route string, opts ...func(*Topic)) *Topic {
 }
 
 func (t *Topic) publish(msg Message) {
-	msg.Topic = t.route
+	msg.topic = t.route
 
 	t.RLock()
 	defer t.RUnlock()

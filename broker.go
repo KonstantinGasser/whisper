@@ -51,6 +51,8 @@ func NewBroker() Broker {
 	}
 }
 
+// NewTopic adds a topic to the created broker. If a route is already in use
+// the function returns an error.
 func (b *broker) NewTopic(route string, opts ...func(*Topic)) error {
 	b.Lock()
 	defer b.Unlock()

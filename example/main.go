@@ -1,11 +1,14 @@
 package main
 
 import (
-	"fmt"
-	"sync"
+	"context"
+	"math/rand"
 	"time"
 
 	"github.com/KonstantinGasser/whisper"
+	modulea "github.com/KonstantinGasser/whisper/example/moduleA"
+	moduleb "github.com/KonstantinGasser/whisper/example/moduleB"
+	modulec "github.com/KonstantinGasser/whisper/example/moduleC"
 )
 
 func main() {
@@ -15,49 +18,28 @@ func main() {
 	broker.NewTopic("topic-1")
 	broker.NewTopic("topic-2")
 
-	var wg sync.WaitGroup
+	mA := modulea.New(broker)
+	mB := moduleb.New(broker)
+	mC := modulec.New(broker)
 
-	for i := 0; i < 1; i++ {
-		wg.Add(1)
-		go func(id int, wg *sync.WaitGroup) {
-			// defer fmt.Printf("consumer[%d] no more message - bye!\n", id)
-			defer wg.Done()
+	ctx := context.Background()
+	go mA.Start(ctx)
+	go mB.Start(ctx)
+	go mC.Start(ctx)
 
-			consumer, err := broker.Group("topic-1", "topic-2")
-			if err != nil {
-				panic(err)
-			}
+	for i := 0; i < 10; i++ {
 
-			for {
-				msg, ok := consumer.Consume()
-				if !ok {
-					break
-				}
-				fmt.Printf("Consumer[%s]: %v\n", msg.Topic, msg.Data)
-			}
-		}(i, &wg)
-	}
-
-	for i := 0; i < 5; i++ {
-		if err := broker.Publish("topic-1", whisper.Message{
-			Data:      fmt.Sprintf("Data %d", i),
-			Timestamp: time.Now().Unix(),
-		}); err != nil {
-			fmt.Println(err)
-			return
+		topic := "topic-1"
+		if rand.Intn(2) == 1 {
+			topic = "topic-2"
 		}
 
-		if err := broker.Publish("topic-2", whisper.Message{
-			Data:      fmt.Sprintf("Data %d", i),
+		if err := broker.Publish(topic, whisper.Message{
 			Timestamp: time.Now().Unix(),
+			Data:      i,
 		}); err != nil {
-			fmt.Println(err)
-			return
+			panic(err)
 		}
+		time.Sleep(time.Second * time.Duration(rand.Intn(2)))
 	}
-
-	time.Sleep(time.Second * 5)
-	fmt.Println("Stopping broker")
-	broker.Stop()
-	fmt.Println("Closed")
 }
