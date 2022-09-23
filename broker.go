@@ -23,6 +23,11 @@ type Broker interface {
 	// Consume which is a blocking call to receive messages from the topic
 	Subscribe(route string) (Consumer, error)
 
+	// Group allows to subscribe to many topic through one Consumer.
+	// Via the Consumer all Messages from all subscribed Topics can be
+	// consumed. If one route/topic does not exist Group returns an error
+	Group(route ...string) (Consumer, error)
+
 	// Publish allows to push a Message to a specific topic which
 	// can be consumed by all connected Consumers
 	Publish(topic string, msg Message) error
@@ -64,12 +69,32 @@ func (b *broker) Subscribe(route string) (Consumer, error) {
 	b.Lock()
 	defer b.Unlock()
 
-	t, ok := b.topics[route]
+	topic, ok := b.topics[route]
 	if !ok {
 		return nil, fmt.Errorf("topic %q does not exist", route)
 	}
 
-	return t.subscribe(), nil
+	msgChan := make(chan Message, 0)
+
+	topic.subscribe(msgChan)
+
+	return &consumer{poll: msgChan}, nil
+}
+
+func (b *broker) Group(routes ...string) (Consumer, error) {
+	b.Lock()
+	defer b.Unlock()
+
+	msgChan := make(chan Message, 0)
+	for _, route := range routes {
+		topic, ok := b.topics[route]
+		if !ok {
+			return nil, fmt.Errorf("topic %q does not exist", route)
+		}
+		topic.subscribe(msgChan)
+	}
+
+	return &consumer{poll: msgChan}, nil
 }
 
 // Publish is a blocking operation if the receiving topic

@@ -17,13 +17,13 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	for i := 0; i < 500; i++ {
+	for i := 0; i < 1; i++ {
 		wg.Add(1)
 		go func(id int, wg *sync.WaitGroup) {
-			defer fmt.Printf("consumer[%d] no more message - bye!\n", id)
+			// defer fmt.Printf("consumer[%d] no more message - bye!\n", id)
 			defer wg.Done()
 
-			consumer, err := broker.Subscribe("topic-1")
+			consumer, err := broker.Group("topic-1", "topic-2")
 			if err != nil {
 				panic(err)
 			}
@@ -33,22 +33,28 @@ func main() {
 				if !ok {
 					break
 				}
-				fmt.Printf("Consumer[topic-1]: %v\n", msg.Data)
+				fmt.Printf("Consumer[%s]: %v\n", msg.Topic, msg.Data)
 			}
 		}(i, &wg)
 	}
 
-	go func() {
-		for i := 0; i < 10000; i++ {
-			if err := broker.Publish("topic-1", whisper.Message{
-				Data:      fmt.Sprintf("Data %d", i),
-				Timestamp: time.Now().Unix(),
-			}); err != nil {
-				fmt.Println(err)
-				return
-			}
+	for i := 0; i < 5; i++ {
+		if err := broker.Publish("topic-1", whisper.Message{
+			Data:      fmt.Sprintf("Data %d", i),
+			Timestamp: time.Now().Unix(),
+		}); err != nil {
+			fmt.Println(err)
+			return
 		}
-	}()
+
+		if err := broker.Publish("topic-2", whisper.Message{
+			Data:      fmt.Sprintf("Data %d", i),
+			Timestamp: time.Now().Unix(),
+		}); err != nil {
+			fmt.Println(err)
+			return
+		}
+	}
 
 	time.Sleep(time.Second * 5)
 	fmt.Println("Stopping broker")
