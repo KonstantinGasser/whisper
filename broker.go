@@ -76,27 +76,34 @@ func (b *broker) Subscribe(route string) (Consumer, error) {
 		return nil, fmt.Errorf("topic %q does not exist", route)
 	}
 
-	msgChan := make(chan Message, 0)
+	cns := consumer{
+		poll:   make(chan Message, 0),
+		closed: false,
+	}
 
-	topic.subscribe(msgChan)
+	topic.subscribe(&cns)
 
-	return &consumer{poll: msgChan}, nil
+	return &cns, nil
 }
 
 func (b *broker) Group(routes ...string) (Consumer, error) {
 	b.Lock()
 	defer b.Unlock()
 
-	msgChan := make(chan Message, 0)
+	cns := consumer{
+		poll:   make(chan Message, 0),
+		closed: false,
+	}
+
 	for _, route := range routes {
 		topic, ok := b.topics[route]
 		if !ok {
 			return nil, fmt.Errorf("topic %q does not exist", route)
 		}
-		topic.subscribe(msgChan)
+		topic.subscribe(&cns)
 	}
 
-	return &consumer{poll: msgChan}, nil
+	return &cns, nil
 }
 
 // Publish is a blocking operation if the receiving topic

@@ -7,8 +7,6 @@ import (
 
 	"github.com/KonstantinGasser/whisper"
 	modulea "github.com/KonstantinGasser/whisper/example/moduleA"
-	moduleb "github.com/KonstantinGasser/whisper/example/moduleB"
-	modulec "github.com/KonstantinGasser/whisper/example/moduleC"
 )
 
 func main() {
@@ -19,13 +17,13 @@ func main() {
 	broker.NewTopic("topic-2")
 
 	mA := modulea.New(broker)
-	mB := moduleb.New(broker)
-	mC := modulec.New(broker)
+	// mB := moduleb.New(broker)
+	// mC := modulec.New(broker)
 
 	ctx := context.Background()
 	go mA.Start(ctx)
-	go mB.Start(ctx)
-	go mC.Start(ctx)
+	// go mB.Start(ctx)
+	// go mC.Start(ctx)
 
 	for i := 0; i < 10; i++ {
 
@@ -40,6 +38,8 @@ func main() {
 		}); err != nil {
 			panic(err)
 		}
-		time.Sleep(time.Second * time.Duration(rand.Intn(2)))
+		// time.Sleep(time.Second * time.Duration(rand.Intn(2)))
 	}
+
+	broker.Stop()
 }

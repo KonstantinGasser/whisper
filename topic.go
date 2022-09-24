@@ -1,6 +1,7 @@
 package whisper
 
 import (
+	"fmt"
 	"sync"
 )
 
@@ -19,14 +20,14 @@ type Topic struct {
 	// mutex used to protect the consumer
 	// slice while adding/removing
 	sync.RWMutex
-	consumer []chan<- Message
+	consumer []*consumer
 	close    <-chan struct{}
 }
 
 func newTopic(route string, opts ...func(*Topic)) *Topic {
 	return &Topic{
 		route:    route,
-		consumer: make([]chan<- Message, 0),
+		consumer: make([]*consumer, 0),
 	}
 }
 
@@ -37,25 +38,34 @@ func (t *Topic) publish(msg Message) {
 	defer t.RUnlock()
 
 	for _, c := range t.consumer {
-		c <- msg
+		c.poll <- msg
 	}
 
 }
 
 // subscribe creates the actual Consumer from which messages
 // to the topic can be consumed
-func (t *Topic) subscribe(msgChan chan<- Message) {
+func (t *Topic) subscribe(cns *consumer) {
 	t.RLock()
 	defer t.RUnlock()
 
-	t.consumer = append(t.consumer, msgChan)
+	t.consumer = append(t.consumer, cns)
 }
 
 func (t *Topic) stop() {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Printf("Panic in topic: %s: %v\n", t.route, err)
+		}
+	}()
+
 	t.Lock()
 	defer t.Unlock()
 
 	for _, c := range t.consumer {
-		close(c)
+		if !c.Closed() {
+			c.close()
+			close(c.poll)
+		}
 	}
 }
